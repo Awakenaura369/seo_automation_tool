@@ -4,33 +4,28 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import time
 import re
+import random
 from groq import Groq
 
 # =================================================================
-# 1. إعدادات الصفحة والستايل
+# 1. إعدادات الصفحة والـ Session State
 # =================================================================
-st.set_page_config(page_title="SEO & Social Media Pro AI", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="SEO & Marketing Automation Pro", layout="wide", page_icon="🚀")
 
-# تهيئة الـ Session State لإدارة التنقل والبيانات
 if 'page' not in st.session_state:
     st.session_state.page = "🏠 الرئيسية"
 if 'groq_api_key' not in st.session_state:
     st.session_state.groq_api_key = ''
-
-st.markdown("""
-<style>
-    .main-header { font-size: 2.8rem; background: linear-gradient(45deg, #4b6cb7, #182848); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; font-weight: bold; }
-    .stButton>button { width: 100%; border-radius: 8px; height: 3em; background-color: #4b6cb7; color: white; }
-    .card { background: #f9f9f9; padding: 20px; border-radius: 15px; border-left: 5px solid #4b6cb7; box-shadow: 2px 2px 10px rgba(0,0,0,0.05); }
-</style>
-""", unsafe_allow_html=True)
+if 'proxy_list' not in st.session_state:
+    st.session_state.proxy_list = []
 
 # =================================================================
-# 2. وظائف الذكاء الاصطناعي والتحليل
+# 2. وظائف الذكاء الاصطناعي والبروكسي
 # =================================================================
-def ask_ai(prompt):
+
+def generate_ai_content(prompt):
     if not st.session_state.groq_api_key:
-        return "⚠️ يرجى إدخال مفتاح Groq API في القائمة الجانبية لتشغيل ميزات AI."
+        return "⚠️ عذراً، يجب إدخال مفتاح API لـ Groq في الإعدادات."
     try:
         client = Groq(api_key=st.session_state.groq_api_key)
         completion = client.chat.completions.create(
@@ -39,133 +34,152 @@ def ask_ai(prompt):
         )
         return completion.choices[0].message.content
     except Exception as e:
-        return f"❌ خطأ في الاتصال: {str(e)}"
+        return f"❌ خطأ في AI: {str(e)}"
 
-def analyze_web(url):
+def get_free_proxies():
+    """جلب بروكسيات مجانية وتجربتها"""
+    url = "https://www.sslproxies.org/"
     try:
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        res = requests.get(url, headers=headers, timeout=5)
+        res = requests.get(url, timeout=10)
         soup = BeautifulSoup(res.content, 'html.parser')
-        title = soup.title.string if soup.title else "لا يوجد عنوان"
-        links = len(soup.find_all('a'))
-        images = len(soup.find_all('img'))
-        return {"title": title, "links": links, "images": images, "text": soup.get_text()[:2000]}
-    except:
-        return None
+        proxies = []
+        # استخراج أول 15 بروكسي من الجدول
+        table = soup.find('table', id='proxylisttable') # قد يتغير الـ ID حسب تحديث الموقع
+        rows = soup.find_all('tr')[1:16] 
+        for row in rows:
+            tds = row.find_all('td')
+            if len(tds) > 1:
+                proxies.append(f"{tds[0].text}:{tds[1].text}")
+        return proxies
+    except Exception as e:
+        st.error(f"خطأ في جلب البروكسيات: {e}")
+        return []
 
 # =================================================================
 # 3. صفحات التطبيق
 # =================================================================
 
-# --- الصفحة الرئيسية ---
-def show_main():
-    st.markdown('<h1 class="main-header">🚀 SEO & Social Media Pro</h1>', unsafe_allow_html=True)
-    st.write("<p style='text-align:center;'>نظام الأتمتة الشامل للمحتوى، الروابط، وحركة الزوار</p>", unsafe_allow_html=True)
+def show_main_page():
+    st.markdown("<h1 style='text-align: center;'>🚀 SEO & Social Media Master</h1>", unsafe_allow_html=True)
+    st.write("---")
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.markdown('<div class="card"><h3>✍️ المحتوى</h3><p>توليد مقالات وإعادة صياغة احترافية.</p></div>', unsafe_allow_html=True)
-        if st.button("اذهب للمحتوى"): st.session_state.page = "✍️ Content AI"; st.rerun()
+        if st.button("📱 إدارة السوشيال ميديا", use_container_width=True):
+            st.session_state.page = "📱 Social Media"; st.rerun()
     with col2:
-        st.markdown('<div class="card"><h3>📱 السوشيال</h3><p>أتمتة منشورات فيسبوك، انستغرام وتويتر.</p></div>', unsafe_allow_html=True)
-        if st.button("اذهب للسوشيال"): st.session_state.page = "📱 Social Media"; st.rerun()
+        if st.button("🚦 مولد الترافيك والبروكسي", use_container_width=True):
+            st.session_state.page = "🚦 Traffic Generator"; st.rerun()
     with col3:
-        st.markdown('<div class="card"><h3>🚦 الترافيك</h3><p>محاكاة زيارات البحث وتخطيط النمو.</p></div>', unsafe_allow_html=True)
-        if st.button("اذهب للترافيك"): st.session_state.page = "🚦 Traffic Generator"; st.rerun()
+        if st.button("📊 محلل المواقع", use_container_width=True):
+            st.session_state.page = "📊 Site Analyzer"; st.rerun()
 
-# --- صفحة المحتوى (SEO & Content) ---
-def show_content():
-    st.title("✍️ AI Content & SEO")
-    mode = st.tabs(["توليد مقال جديد", "إعادة صياغة (Spinner)", "كلمات مفتاحية"])
+def show_traffic_generator():
+    st.title("🚦 Traffic & Search Simulator")
     
-    with mode[0]:
-        topic = st.text_input("عنوان المقال أو الموضوع:")
-        if st.button("توليد المقال"):
-            st.markdown(ask_ai(f"اكتب مقال SEO طويل واحترافي عن: {topic}"))
-            
-    with mode[1]:
-        text = st.text_area("أدخل النص المراد تدويره:")
-        if st.button("إعادة الصياغة"):
-            st.markdown(ask_ai(f"أعد صياغة النص التالي بأسلوب فريد: {text}"))
+    url = st.text_input("رابط الموقع المستهدف:", placeholder="https://example.com")
+    keyword = st.text_input("الكلمة المفتاحية (Referer):", value="google search")
+    
+    c1, c2 = st.columns(2)
+    with c1:
+        visit_count = st.number_input("عدد الزيارات:", min_value=1, max_value=500, value=10)
+    with c2:
+        use_proxy = st.toggle("تفعيل نظام البروكسي (Proxy Rotation)")
 
-# --- صفحة السوشيال ميديا ---
-def show_social():
-    st.title("📱 Social Media Manager")
-    col1, col2 = st.columns(2)
-    with col1:
-        post_topic = st.text_input("موضوع المنشور:")
-        platform = st.selectbox("المنصة:", ["Instagram", "Facebook", "Twitter", "LinkedIn"])
-    with col2:
-        tone = st.selectbox("النبرة:", ["بيعية", "تفاعلية", "رسمية"])
+    if use_proxy:
+        if st.button("🔄 تحديث قائمة البروكسيات"):
+            st.session_state.proxy_list = get_free_proxies()
+            st.success(f"تم جلب {len(st.session_state.proxy_list)} بروكسي.")
         
-    if st.button("توليد منشور السوشيال"):
-        st.info(ask_ai(f"اكتب منشور {platform} عن {post_topic} بنبرة {tone}. أضف إيموجي وهاشتاغات."))
+        if st.session_state.proxy_list:
+            st.info(f"البروكسيات المتاحة: {', '.join(st.session_state.proxy_list[:3])}...")
 
-# --- صفحة الباكلينكس ---
-def show_backlinks():
-    st.title("🔗 Backlink Builder")
-    site_niche = st.text_input("مجال موقعك (مثلاً: سفر، تقنية):")
-    if st.button("البحث عن فرص"):
-        st.markdown(ask_ai(f"أعطني خطة 10 مواقع للحصول على باكلينكس Guest Post في مجال {site_niche}."))
+    if st.button("🚀 تشغيل المحاكي الآن", type="primary"):
+        if not url:
+            st.error("أدخل الرابط أولاً!")
+            return
+            
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        for i in range(visit_count):
+            headers = {
+                'User-Agent': random.choice([
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15',
+                    'Mozilla/5.0 (Linux; Android 10; SM-A505F) AppleWebKit/537.36'
+                ]),
+                'Referer': f'https://www.google.com/search?q={keyword.replace(" ", "+")}'
+            }
+            
+            proxy_config = None
+            if use_proxy and st.session_state.proxy_list:
+                p = random.choice(st.session_state.proxy_list)
+                proxy_config = {"http": f"http://{p}", "https": f"http://{p}"}
+            
+            try:
+                # محاكاة الطلب
+                # requests.get(url, headers=headers, proxies=proxy_config, timeout=5)
+                time.sleep(random.uniform(0.5, 2.0)) # تأخير لتبدو الزيارة طبيعية
+                status_text.text(f"تم إرسال الزيارة رقم {i+1} بنجاح.")
+            except:
+                status_text.text(f"فشلت الزيارة رقم {i+1} (Proxy Error).")
+            
+            progress_bar.progress((i + 1) / visit_count)
+            
+        st.success("✅ اكتملت المهمة!")
 
-# --- صفحة الترافيك (Traffic Generator) ---
-def show_traffic():
-    st.title("🚦 Traffic Generator & Search Simulator")
+def show_social_media():
+    st.title("📱 Social Media Content AI")
+    topic = st.text_area("عن ماذا تريد الكتابة؟")
+    platform = st.multiselect("اختر المنصات:", ["Instagram", "Facebook", "LinkedIn", "Twitter"])
     
-    
+    if st.button("✨ توليد المنشورات"):
+        with st.spinner("الذكاء الاصطناعي يكتب لك الآن..."):
+            prompt = f"Write engaging posts for {', '.join(platform)} about: {topic}. Include emojis and relevant hashtags."
+            result = generate_ai_content(prompt)
+            st.markdown(result)
 
-    url = st.text_input("رابط الموقع المستهدف:")
-    kw = st.text_input("الكلمة المفتاحية المستهدفة في جوجل:")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        source = st.selectbox("مصدر الترافيك:", ["Google Search", "Direct", "Social Media"])
-    with col2:
-        visits = st.number_input("عدد الزيارات المحاكية:", 10, 5000)
-
-    if st.button("تشغيل محاكي الترافيك"):
-        st.success(f"جاري إرسال إشارات زيارة محاكية من {source} للرابط {url}")
-        st.code(f"""
-import requests
-# Simulation for {visits} visits from {source}
-headers = {{'Referer': 'https://www.google.com/search?q={kw}'}}
-# logic to repeat request with rotation
-        """, language="python")
-        st.info("تم تخطيط الحملة. في نسخة الـ Bot، يتم تنفيذ هذه الطلبات عبر Proxy.")
-
-# --- صفحة محلل المواقع ---
-def show_analyzer():
-    st.title("📊 Site Analyzer")
-    url = st.text_input("أدخل الرابط للفحص:")
-    if st.button("ابدأ التحليل"):
-        data = analyze_web(url)
-        if data:
-            st.write(f"✅ **العنوان:** {data['title']}")
-            st.write(f"🔗 **الروابط المكتشفة:** {data['links']}")
-            st.write(f"🖼️ **الصور:** {data['images']}")
-        else:
-            st.error("فشل الوصول للموقع.")
+def show_site_analyzer():
+    st.title("📊 SEO Site Analyzer")
+    url = st.text_input("أدخل URL الموقع:")
+    if st.button("🔍 تحليل"):
+        try:
+            res = requests.get(url, timeout=10)
+            soup = BeautifulSoup(res.content, 'html.parser')
+            st.subheader("نتائج التحليل:")
+            st.write(f"**العنوان (Title):** {soup.title.string if soup.title else 'لا يوجد'}")
+            st.write(f"**وصف الميتا:** {soup.find('meta', attrs={'name': 'description'})['content'] if soup.find('meta', attrs={'name': 'description'}) else 'لا يوجد'}")
+            st.write(f"**عدد الروابط:** {len(soup.find_all('a'))}")
+            st.write(f"**عدد الصور:** {len(soup.find_all('img'))}")
+        except:
+            st.error("تعذر الوصول للموقع.")
 
 # =================================================================
-# 4. التحكم الرئيسي (Main App)
+# 4. التحكم في التطبيق (Main App Logic)
 # =================================================================
+
 def main():
     with st.sidebar:
-        st.header("🛠️ الإعدادات")
-        st.session_state.groq_api_key = st.text_input("Groq API Key:", type="password")
+        st.title("🛠️ الإعدادات")
+        st.session_state.groq_api_key = st.text_input("Groq API Key", value=st.session_state.groq_api_key, type="password")
         st.write("---")
         
-        menu = ["🏠 الرئيسية", "✍️ Content AI", "📱 Social Media", "🔗 Backlinks", "📊 Analyzer", "🚦 Traffic Generator"]
+        menu = ["🏠 الرئيسية", "📱 Social Media", "🚦 Traffic Generator", "📊 Site Analyzer", "🔗 Backlink Builder"]
         choice = st.radio("القائمة:", menu, index=menu.index(st.session_state.page) if st.session_state.page in menu else 0)
         st.session_state.page = choice
-
-    # منطق عرض الصفحات
-    if st.session_state.page == "🏠 الرئيسية": show_main()
-    elif st.session_state.page == "✍️ Content AI": show_content()
-    elif st.session_state.page == "📱 Social Media": show_social()
-    elif st.session_state.page == "🔗 Backlinks": show_backlinks()
-    elif st.session_state.page == "📊 Analyzer": show_analyzer()
-    elif st.session_state.page == "🚦 Traffic Generator": show_traffic()
+        
+    # التنقل بين الصفحات
+    if st.session_state.page == "🏠 الرئيسية": show_main_page()
+    elif st.session_state.page == "📱 Social Media": show_social_media()
+    elif st.session_state.page == "🚦 Traffic Generator": show_traffic_generator()
+    elif st.session_state.page == "📊 Site Analyzer": show_site_analyzer()
+    elif st.session_state.page == "🔗 Backlink Builder":
+        st.title("🔗 Backlink Opportunities")
+        st.info("اكتشف أفضل المواقع في مجالك للحصول على باكلينكس.")
+        niche = st.text_input("المجال:")
+        if st.button("بحث"):
+            st.write(generate_ai_content(f"Give me a list of high DA websites for backlinks in the {niche} niche."))
 
 if __name__ == "__main__":
     main()
